@@ -19,6 +19,12 @@ The key is bus_id and the values are lat and lng.
 Every event represents a location change.
 The latitude and longitude are changes by a constant value
 with every event.
+
+You must set the TOPIC_NAME environment variable.
+This image does not have a default TOPIC_NAME set, to avoid
+potentially confusing errors.
+
+Reference: https://github.com/confluentinc/confluent-kafka-python
 """
 
 BROKER = os.environ['BROKER']
@@ -81,9 +87,11 @@ avroProducer = AvroProducer(
 )
 
 # Initialize key and values
-key = {"bus_id": 1}
 lat = 40.043152
 lng = -75.18071
+bus_id = 1
+
+key = {"bus_id": 1}
 
 # Produce events simulating bus movements, forever
 while True:
