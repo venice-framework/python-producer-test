@@ -23,8 +23,7 @@ class CustomAdmin:
   
       new_topics = [NewTopic(topic_name,
                              num_partitions=3,
-                             replication_factor=3,
-                             request_required_acks=1)
+                             replication_factor=3)
                     for topic_name in topic_names]
       # Call create_topics to asynchronously create topics, a dict
       # of <topic,future> is returned.
