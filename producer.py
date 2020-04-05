@@ -100,8 +100,8 @@ while True:
       "lat": lat,
       "lng": lng 
     }
+    print("Producing bus:{} lat: {}, lng: {}".format(bus_id, lat, lng))
     avroProducer.produce(topic=TOPIC_NAME, value=value, key=key)
-    print("I just produced bus:{} lat: {}, lng: {}".format(bus_id, lat, lng))
     lat += 0.000001
     lng += 0.000001
   avroProducer.flush()
