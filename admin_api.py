@@ -4,10 +4,8 @@ import sys
 import threading
 import logging
 
-# References:
+# Reference:
 # https://github.com/confluentinc/confluent-kafka-python/blob/master/examples/adminapi.py
-# https://docs.confluent.io/3.0.0/clients/confluent-kafka-python/index.html#
-# https://docs.confluent.io/current/clients/python.html
 
 class CustomAdmin:
   def __init__(self, broker):
@@ -21,11 +19,7 @@ class CustomAdmin:
   def create_topics(self, topic_names):
       """ Create topics """
   
-      new_topics = [NewTopic(topic_name,
-                             num_partitions=3,
-                             replication_factor=3,
-                             request_required_acks=1)
-                    for topic_name in topic_names]
+      new_topics = [NewTopic(topic_name, num_partitions=3, replication_factor=1) for topic_name in topic_names]
       # Call create_topics to asynchronously create topics, a dict
       # of <topic,future> is returned.
       futures = self.admin.create_topics(new_topics)

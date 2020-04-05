@@ -1,6 +1,5 @@
-from confluent_kafka import Producer
-from confluent_kafka.avro import CachedSchemaRegistryClient
-from confluent_kafka.avro.serializer.message_serializer import MessageSerializer
+from confluent_kafka import avro
+from confluent_kafka.avro import AvroProducer
 
 import os
 import requests
@@ -32,7 +31,7 @@ BROKER = os.environ['BROKER']
 SCHEMA_REGISTRY_URL = os.environ['SCHEMA_REGISTRY_URL']
 TOPIC_NAME = os.environ['TOPIC_NAME']
 
-def delivery_callback(err, msg):
+def delivery_report(err, msg):
     """
     Called once for each message produced to indicate delivery result.
     Triggered by poll() or flush().
@@ -43,18 +42,14 @@ def delivery_callback(err, msg):
         print('Message delivered to {} [{}]'.
         format(msg.topic(), msg.partition()))
 
+
 # Create a topic if it doesn't exist yet
 admin = CustomAdmin(BROKER)
 if not admin.topic_exists(TOPIC_NAME):
   admin.create_topics([TOPIC_NAME])
 
-# Define wrapper function for serializing in avro format
-serialize_avro = MessageSerializer(
-    CachedSchemaRegistryClient(SCHEMA_REGISTRY_URL)
-  ).encode_record_with_schema
-
-# Define value schema
-value_schema = """
+# Define schemas
+value_schema = avro.loads("""
     {
         "namespace": "septa.bus.location",
         "name": "value",
@@ -64,58 +59,51 @@ value_schema = """
             {"name": "lng", "type": "float", "doc": "longitude"}
         ]
     }
-"""
+""")
+
+key_schema = avro.loads("""
+{
+   "namespace": "septa.bus.location",
+   "name": "key",
+   "type": "record",
+   "fields" : [
+     {
+       "name" : "bus_id",
+       "type" : "int"
+     }
+   ]
+}
+""")
 
 # Initialize producer
-# Configuration options:
-# https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-producer = Producer(
+avroProducer = AvroProducer(
   {
     'bootstrap.servers': BROKER,
-    # Maximum number of messages to send at once. Limits the size of your
-    # queue. The default is 10000 at the time of this writing (see above link
-    # for updated config). It is set to 1 here so the user can see the output
-    # update per message in the logs.
-    'batch_num_messages': 1,
-  }
+    'on_delivery': delivery_report,
+    'schema.registry.url': SCHEMA_REGISTRY_URL
+  },
+  default_key_schema=key_schema,
+  default_value_schema=value_schema
 )
 
 # Initialize key and values
-key = 1
 lat = 40.043152
 lng = -75.18071
+bus_id = 1
 
-# Produce n events simulating bus movements
-n = 10000
-for i in range(n):
-  value = {
-    "lat": lat,
-    "lng": lng 
-  }
-  serialized_value = serialize_avro(topic=TOPIC_NAME,
-                                    value_schema=value_schema,
-                                    value=value,
-                                    is_key=false)
-  serialized_key = str(key)
-  try:
-    producer.produce(topic=TOPIC_NAME,
-                     value=serialized_value,
-                     key=serialized_key,
-                     callback=delivery_callback)
-  except BufferError:
-    print("Local producer queue is full: {} messages in queue".format(len(producer)))
+key = {"bus_id": 1}
 
-  print("I just produced key: {} lat: {}, lng: {}".format(key, lat, lng))
-  # Polls the producer for events and calls the corresponding callbacks
-  # (if registered)
-  #
-  # `timeout` refers to the maximum time to block waiting for events
-  #
-  # Since produce() is an asynchronous API this poll() call will most
-  # likely not serve the delivery callback for the last produce()d message.
-  lat += 0.000001
-  lng += 0.000001
-  producer.poll(timeout=0)
-  time.sleep(1)
-# Cleanup step: wait for all messages to be delivered before exiting. 
-producer.flush()
+# Produce events simulating bus movements, forever
+while True:
+  for i in range(5):
+    value = {
+      "lat": lat,
+      "lng": lng 
+    }
+    print("Producing bus:{} lat: {}, lng: {}".format(bus_id, lat, lng))
+    avroProducer.produce(topic=TOPIC_NAME, value=value, key=key)
+    lat += 0.000001
+    lng += 0.000001
+  avroProducer.flush()
+  print("I have flushed")
+  time.sleep(5)
