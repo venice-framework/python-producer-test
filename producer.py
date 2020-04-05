@@ -25,7 +25,11 @@ You must set the TOPIC_NAME environment variable.
 This image does not have a default TOPIC_NAME set, to avoid
 potentially confusing errors.
 
-Reference: https://github.com/confluentinc/confluent-kafka-python
+References:
+https://github.com/confluentinc/confluent-kafka-python
+https://github.com/confluentinc/confluent-kafka-python/issues/428#issuecomment-444320103
+https://docs.confluent.io/current/clients/confluent-kafka-python/
+
 """
 
 BROKER = os.environ['BROKER']
@@ -72,17 +76,9 @@ value_schema = avro.loads("""
 # Initialize producer
 # Configuration options:
 # https://github.com/edenhill/librdkafka/blob/master/CONFIGURATION.md
-print(help(Producer))
 producer = Producer(
     {
         'bootstrap.servers': BROKER,
-        # Maximum number of messages to send at once.
-        # Limits the size of your queue.
-        # The default is 10000 at the time of this writing.
-        # See above link for updated defaults.
-        # It is set to 1 here so the user can see the output
-        # update per message in the logs.
-        'batch.num.messages': 1,
         'default.topic.config': {'acks': 1}
     }
 )
@@ -113,7 +109,7 @@ for i in range(n):
         print("Local producer queue is full: {} messages in queue".format(
           len(producer)))
 
-    print("I just produced key: {} lat: {}, lng: {}".format(key, lat, lng))
+    print("EVENT COUNT: {} key: {} lat: {}, lng: {}".format(i, key, lat, lng))
     # Polls the producer for events and calls the corresponding callbacks
     # (if registered)
     #
@@ -123,6 +119,6 @@ for i in range(n):
     # likely not serve the delivery callback for the last produce()d message.
     lat += 0.000001
     lng += 0.000001
-    producer.poll(timeout=3)
+    producer.poll(timeout=0)
 # Cleanup step: wait for all messages to be delivered before exiting.
 producer.flush()
