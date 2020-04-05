@@ -21,6 +21,7 @@ The latitude and longitude are changes by a constant value
 with every event.
 
 You must set the TOPIC_NAME environment variable.
+
 This image does not have a default TOPIC_NAME set, to avoid
 potentially confusing errors.
 
@@ -33,6 +34,7 @@ BROKER = os.environ['BROKER']
 SCHEMA_REGISTRY_URL = os.environ['SCHEMA_REGISTRY_URL']
 TOPIC_NAME = os.environ['TOPIC_NAME']
 
+
 def delivery_report(err, msg):
     """
     Called once for each message produced to indicate delivery result.
@@ -42,13 +44,13 @@ def delivery_report(err, msg):
         print('Message delivery failed: {}'.format(err))
     else:
         print('Message delivered to {} [{}]'.
-        format(msg.topic(), msg.partition()))
+              format(msg.topic(), msg.partition()))
 
 
 # Create a topic if it doesn't exist yet
 admin = CustomAdmin(BROKER)
 if not admin.topic_exists(TOPIC_NAME):
-  admin.create_topics([TOPIC_NAME])
+    admin.create_topics([TOPIC_NAME])
 
 # Define schemas
 # NOTE: bus_id is included in the value as a hacky workaround
@@ -85,13 +87,13 @@ key_schema = avro.loads("""
 
 # Initialize producer
 avroProducer = AvroProducer(
-  {
-    'bootstrap.servers': BROKER,
-    'on_delivery': delivery_report,
-    'schema.registry.url': SCHEMA_REGISTRY_URL
-  },
-  default_key_schema=key_schema,
-  default_value_schema=value_schema
+    {
+        'bootstrap.servers': BROKER,
+        'on_delivery': delivery_report,
+        'schema.registry.url': SCHEMA_REGISTRY_URL
+    },
+    default_key_schema=key_schema,
+    default_value_schema=value_schema
 )
 
 # Initialize key and values
@@ -105,9 +107,9 @@ key = {"bus_id": 1}
 count = 1
 while True:
     value = {
-      "bus_id": bus_id,
-      "lat": lat,
-      "lng": lng 
+        "bus_id": bus_id,
+        "lat": lat,
+        "lng": lng
     }
     avroProducer.produce(topic=TOPIC_NAME, value=value, key=key)
     print("EVENT COUNT: {} key: {} lat: {}, lng: {}".format(count, key, lat, lng))
@@ -118,11 +120,11 @@ while True:
     #
     # Since produce() is an asynchronous API this poll() call will most
     # likely not serve the delivery callback for the last produce()d message.
-    producer.poll(timeout=0)
+    avroProducer.poll(timeout=0)
     time.sleep(0.3)
 
     lat += 0.000001
     lng += 0.000001
     count += 1
 # Cleanup step: wait for all messages to be delivered before exiting.
-producer.flush()
+avroProducer.flush()
